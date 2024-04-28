@@ -1,14 +1,11 @@
 import schedule
-import time
+from schedule import repeat, every
 
 
+@repeat(every(10).seconds.tag('force'))
 def job():
     print("Hi Amir!")
 
 
-schedule.every(3).seconds.do(job)
-
-
 while True:
     schedule.run_pending()
-    time.sleep(1)
