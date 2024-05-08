@@ -175,5 +175,3 @@ class ScheduleTest(unittest.TestCase):
         assert every().hours.do(make_mock_job('job1')).unit == every().hour.do(make_mock_job('job2')).unit
         assert every().days.do(make_mock_job('job1')).unit == every().day.do(make_mock_job('job2')).unit
         assert every().weeks.do(make_mock_job('job1')).unit == every().week.do(make_mock_job('job2')).unit
-
-
