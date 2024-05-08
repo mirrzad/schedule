@@ -204,7 +204,7 @@ class Job:
     def week(self):
         if self.interval != 1:
             raise IntervalError('Use weeks instead of second')
-        return self.seconds
+        return self.weeks
 
     @property
     def weeks(self):
@@ -215,7 +215,7 @@ class Job:
     def monday(self):
         if self.interval != 1:
             raise IntervalError(
-                'monday() is only for weekly jobs. Using monday() for every '
+                'monday() is for weekly jobs. Using monday() for every '
                 '2 or more weeks is not supported'
             )
         self.start_day = 'monday'
@@ -225,7 +225,7 @@ class Job:
     def tuesday(self):
         if self.interval != 1:
             raise IntervalError(
-                'tuesday() is only for weekly jobs. Using tuesday() for every '
+                'tuesday() is for weekly jobs. Using tuesday() for every '
                 '2 or more weeks is not supported'
             )
         self.start_day = 'tuesday'
@@ -235,7 +235,7 @@ class Job:
     def wednesday(self):
         if self.interval != 1:
             raise IntervalError(
-                'wednesday() is only for weekly jobs. Using wednesday() for every '
+                'wednesday() is for weekly jobs. Using wednesday() for every '
                 '2 or more weeks is not supported'
             )
         self.start_day = 'wednesday'
@@ -245,7 +245,7 @@ class Job:
     def thursday(self):
         if self.interval != 1:
             raise IntervalError(
-                'thursday() is only for weekly jobs. Using thursday() for every '
+                'thursday() is for weekly jobs. Using thursday() for every '
                 '2 or more weeks is not supported'
             )
         self.start_day = 'thursday'
@@ -255,7 +255,7 @@ class Job:
     def friday(self):
         if self.interval != 1:
             raise IntervalError(
-                'friday() is only for weekly jobs. Using friday() for every '
+                'friday() is for weekly jobs. Using friday() for every '
                 '2 or more weeks is not supported'
             )
         self.start_day = 'friday'
@@ -265,7 +265,7 @@ class Job:
     def saturday(self):
         if self.interval != 1:
             raise IntervalError(
-                'saturday() is only for weekly jobs. Using saturday() for every '
+                'saturday() is for weekly jobs. Using saturday() for every '
                 '2 or more weeks is not supported'
             )
         self.start_day = 'saturday'
@@ -275,7 +275,7 @@ class Job:
     def sunday(self):
         if self.interval != 1:
             raise IntervalError(
-                'sunday() is only for weekly jobs. Using sunday() for every '
+                'sunday() is for weekly jobs. Using sunday() for every '
                 '2 or more weeks is not supported'
             )
         self.start_day = 'sunday'
@@ -404,12 +404,13 @@ class Job:
             raise ScheduleError('Invalid unit for the job')
 
         if self.latest is not None:
-            if self.latest <= self.interval:
-                raise ScheduleValueError('Latest must be greater than interval')
+            if not (self.latest >= self.interval):
+                raise ScheduleError('Latest must be greater than interval')
             else:
                 interval = random.randint(self.interval, self.latest)
         else:
             interval = self.interval
+
         self.period = datetime.timedelta(**{self.unit: interval})
         self.next_run = datetime.datetime.now() + self.period
 
