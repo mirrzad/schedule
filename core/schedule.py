@@ -91,7 +91,6 @@ class Job:
         self.interval = interval
         self.unit = None
         self.job_func = None
-        self.period = None
         self.next_run = None
         self.last_run = None
         self.latest = None
@@ -145,7 +144,7 @@ class Job:
 
         else:
             fmt = (
-                'Every %(interval)s' + ('to %(latest)s' if self.latest is not None else '')
+                'Every %(interval)s' + (' to %(latest)s' if self.latest is not None else '')
                 + ' %(unit)s do %(call_repr)s %(time_stats)s'
             )
             return fmt % dict(
@@ -411,41 +410,45 @@ class Job:
         else:
             interval = self.interval
 
-        self.period = datetime.timedelta(**{self.unit: interval})
-        self.next_run = datetime.datetime.now() + self.period
+        now = datetime.datetime.now(self.at_time_zone)
+
+        next_run = now
 
         if self.start_day is not None:
             if self.unit != 'weeks':
-                raise ScheduleValueError('Unit must be weeks')
-            weekdays = ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')
-            if self.start_day not in weekdays:
-                raise ScheduleValueError('Invalid day of the week. valid days are: {}'.format(weekdays))
-
-            weekday = weekdays.index(self.start_day)
-            days_ahead = weekday - self.next_run.weekday()
-
-            if days_ahead <= 0:
-                days_ahead += 7
-
-            self.next_run += datetime.timedelta(days_ahead) - self.period
+                raise ScheduleValueError('Invalid unit')
+            next_run = _move_to_next_weekday(next_run, self.start_day)
 
         if self.at_time is not None:
-            if self.unit not in ('days', 'hours', 'minutes') and self.start_day is None:
-                raise ScheduleValueError('Invalid unit for the time')
+            next_run = self._move_to_at_time(next_run)
 
-            kwargs = {'second': self.at_time.second,
-                      'minute': self.at_time.minute,
-                      'hour': self.at_time.hour,
-                      'microsecond': 0
-                      }
-            self.next_run = self.next_run.replace(**kwargs)
+        period = datetime.timedelta(**{self.unit: interval})
+        if interval != 1:
+            next_run += period
+
+        while next_run <= now:
+            next_run += period
 
         if self.at_time_zone is not None:
-            self.next_run = self.at_time_zone.localize(self.next_run).astimezone().replace(tzinfo=None)
+            next_run = self.at_time_zone.localize(next_run).astimezone().replace(tzinfo=None)
 
-        if self.start_day is not None and self.at_time is not None:
-            if (self.next_run - datetime.datetime.now()).days >= 7:
-                self.next_run -= self.period
+        self.next_run = next_run
+
+    def _move_to_at_time(self, moment):
+        if self.at_time is None:
+            return moment
+
+        kwargs = {"second": self.at_time.second, "microsecond": 0}
+
+        if self.unit == "days" or self.start_day is not None:
+            kwargs["hour"] = self.at_time.hour
+
+        if self.unit in ["days", "hours"] or self.start_day is not None:
+            kwargs["minute"] = self.at_time.minute
+
+        moment = moment.replace(**kwargs)
+
+        return moment
 
     @property
     def should_run(self):
@@ -507,3 +510,22 @@ def repeat(job):
         return func
 
     return _wrapper
+
+
+def _move_to_next_weekday(moment, weekday):
+    weekday_index = _weekday_index(weekday)
+    days_ahead = weekday_index - moment.weekday()
+
+    if days_ahead <= 0:
+        days_ahead += 7
+
+    return moment + datetime.timedelta(days=days_ahead)
+
+
+def _weekday_index(weekday):
+    weekdays = ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')
+
+    if weekday not in weekdays:
+        raise ScheduleValueError("Invalid start day (valid start days are {})".format(weekdays))
+
+    return weekdays.index(weekday)
